@@ -85,41 +85,47 @@ def step_verify(results: Path, device: str) -> dict:
 
 def step_prepare(setup: abl.Setup, results: Path, device: str, spin_s: float = PRECURSOR_SPIN_S,
                  stats_s: float = PRECURSOR_STATS_S) -> dict:
-    """Disk calibration and a spun-up precursor at this resolution."""
+    """Disk calibration and a spun-up precursor at this resolution.
+
+    A further inflow realisation (``setup.realisation`` > 0) gets its own precursor from another random seed and
+    keeps the disk calibration of the resolution.
+    """
     n = setup.cells_per_d
-    cal = turbine.calibrate(n, device)
     cals = _read_json(results / "disk_calibration.json")
-    cals[str(n)] = cal
-    _write_json(results / "disk_calibration.json", cals)
+    if setup.realisation == 0 or str(n) not in cals:
+        cals[str(n)] = turbine.calibrate(n, device)
+        _write_json(results / "disk_calibration.json", cals)
 
     geo = farm.geometry(setup)
-    pre = abl.make_precursor(setup, geo.ny, device)
+    pre = abl.make_precursor(setup, geo.ny, device, seed=1 + setup.realisation)
     hist = abl.spin_up(pre, setup, int(spin_s / setup.dt()), every=max(1000, int(100 / setup.dt())))
     stats = abl.profile_stats(pre, setup, int(stats_s / setup.dt()), every=max(10, int(5 / setup.dt())))
-    np.save(cache(results, f"precursor_D{n}.npy"), pre.save())
+    np.save(cache(results, f"precursor_{setup.tag}.npy"), pre.save())
     prof = pd.DataFrame({k: stats[k] for k in ("z_m", "u", "su", "sv", "sw", "uw")})
-    prof.to_csv(results / f"precursor_profile_D{n}.csv", index=False, float_format="%.6g")
-    pd.DataFrame(hist, columns=["step", "u_hub"]).to_csv(cache(results, f"precursor_spinup_D{n}.csv"), index=False)
+    prof.to_csv(results / f"precursor_profile_{setup.tag}.csv", index=False, float_format="%.6g")
+    pd.DataFrame(hist, columns=["step", "u_hub"]).to_csv(cache(results, f"precursor_spinup_{setup.tag}.csv"),
+                                                         index=False)
     info = {"cells_per_d": n, "dx_m": setup.dx, "nz": setup.nz, "ny": geo.ny, "nx": pre.nx, "z0_m": setup.z0_m,
             "u_hub_lb": stats["u_hub"], "ti_hub": stats["ti_hub"], "ustar_lb": setup.ustar_lb,
             "dt_s": setup.dt(stats["u_hub"]), "spin_s": spin_s, "stats_s": stats_s}
-    _write_json(results / f"precursor_D{n}.json", info)
-    log.info("precursor D/%d: hub %.4f (lattice), TI %.3f", n, stats["u_hub"], stats["ti_hub"])
+    if setup.realisation:
+        info["realisation"] = setup.realisation
+    _write_json(results / f"precursor_{setup.tag}.json", info)
+    log.info("precursor %s: hub %.4f (lattice), TI %.3f", setup.tag, stats["u_hub"], stats["ti_hub"])
     return info
 
 
 def load_prepared(setup: abl.Setup, results: Path) -> tuple[np.ndarray, dict, dict]:
-    n = setup.cells_per_d
-    state = np.load(cache(results, f"precursor_D{n}.npy"))
-    info = _read_json(results / f"precursor_D{n}.json")
-    cal = _read_json(results / "disk_calibration.json")[str(n)]
+    state = np.load(cache(results, f"precursor_{setup.tag}.npy"))
+    info = _read_json(results / f"precursor_{setup.tag}.json")
+    cal = _read_json(results / "disk_calibration.json")[str(setup.cells_per_d)]
     return state, info, cal
 
 
 # --- farm runs ------------------------------------------------------------------------------------------------
 
-def run_path(results: Path, n: int, wd: float) -> Path:
-    return cache(results, f"les_D{n}", f"wd_{wd:05.1f}.npz")
+def run_path(results: Path, n: int, wd: float, realisation: int = 0) -> Path:
+    return cache(results, f"les_{abl.file_tag(n, realisation)}", f"wd_{wd:05.1f}.npz")
 
 
 def step_empty(setup: abl.Setup, results: Path, device: str) -> dict:
@@ -128,15 +134,14 @@ def step_empty(setup: abl.Setup, results: Path, device: str) -> dict:
     out = farm.run_empty(setup, farm.geometry(setup), cal, state, info["u_hub_lb"], device)
     keep = ("band_blocks", "band_k0", "plane_u", "plane_su", "inflow_hub_lb", "dt", "n_spin", "n_avg", "wall_s",
             "mlups")
-    np.savez_compressed(cache(results, f"empty_D{setup.cells_per_d}.npz"), **{k: np.asarray(out[k]) for k in keep})
+    np.savez_compressed(cache(results, f"empty_{setup.tag}.npz"), **{k: np.asarray(out[k]) for k in keep})
     u = out["plane_u"] / out["inflow_hub_lb"]
-    log.info("empty run D/%d: 30-min hub-plane mean U/U_hub %.3f-%.3f (sd %.3f)", setup.cells_per_d, u.min(),
-             u.max(), u.std())
+    log.info("empty run %s: 30-min hub-plane mean U/U_hub %.3f-%.3f (sd %.3f)", setup.tag, u.min(), u.max(), u.std())
     return out
 
 
-def load_empty(results: Path, n: int) -> dict | None:
-    path = cache(results, f"empty_D{n}.npz")
+def load_empty(results: Path, n: int, realisation: int = 0) -> dict | None:
+    path = cache(results, f"empty_{abl.file_tag(n, realisation)}.npz")
     return load_run(path) if path.exists() else None
 
 
@@ -145,10 +150,11 @@ def step_sweep(setup: abl.Setup, results: Path, device: str, directions, force: 
     state, info, cal = load_prepared(setup, results)
     geo = farm.geometry(setup)
     for wd in directions:
-        path = run_path(results, setup.cells_per_d, float(wd))
+        path = run_path(results, setup.cells_per_d, float(wd), setup.realisation)
         if path.exists() and not force:
             continue
-        frames_s = FRAMES_S if float(wd) in frame_directions else 0.0
+        # the animation frames come from the main realisation only
+        frames_s = FRAMES_S if float(wd) in frame_directions and not setup.realisation else 0.0
         out = farm.run_direction(setup, geo, cal, float(wd), state, info["u_hub_lb"], device, frames_s=frames_s)
         out["gpu_mb"] = gpu_memory_mb(device) or np.nan
         np.savez_compressed(path, **{k: np.asarray(v) for k, v in out.items()})
@@ -164,11 +170,11 @@ def collect_runs(setup: abl.Setup, results: Path) -> pd.DataFrame:
     """Per-direction ratios (free-stream equivalent speed / inflow hub speed, per 10-minute block) and run costs."""
     n = setup.cells_per_d
     cal = _read_json(results / "disk_calibration.json")[str(n)]
-    empty = load_empty(results, n)
+    empty = load_empty(results, n, setup.realisation)
     if empty is None:
-        log.warning("no run without turbines at D/%d: ratios refer to the farm-wide inflow speed", n)
+        log.warning("no run without turbines for %s: ratios refer to the farm-wide inflow speed", setup.tag)
     ratios, runs = [], []
-    for path in sorted(cache(results, f"les_D{n}", "x").parent.glob("wd_*.npz")):
+    for path in sorted(cache(results, f"les_{setup.tag}", "x").parent.glob("wd_*.npz")):
         out = load_run(path)
         s = farm.equivalent_speed_ratio(out, cal, empty=empty, setup=setup)
         for b in range(s.shape[0]):
@@ -179,8 +185,8 @@ def collect_runs(setup: abl.Setup, results: Path) -> pd.DataFrame:
                      "gpu_mb": out.get("gpu_mb", np.nan), "dt_s": out["dt"], "inflow_hub_lb": out["inflow_hub_lb"]})
     ratios, runs = pd.DataFrame(ratios), pd.DataFrame(runs)
     if len(runs):
-        ratios.to_csv(results / f"les_ratios_D{n}.csv", index=False, float_format="%.5f")
-        runs.to_csv(results / f"les_runs_D{n}.csv", index=False, float_format="%.5g")
+        ratios.to_csv(results / f"les_ratios_{setup.tag}.csv", index=False, float_format="%.5f")
+        runs.to_csv(results / f"les_runs_{setup.tag}.csv", index=False, float_format="%.5g")
     return ratios
 
 

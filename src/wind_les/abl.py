@@ -32,6 +32,11 @@ from wind_les.solver import KAPPA, LBM
 log = logging.getLogger(__name__)
 
 
+def file_tag(cells_per_d: int, realisation: int = 0) -> str:
+    """Name of a resolution / inflow realisation in result files: D8 for the main runs, D8_r1 for a second inflow."""
+    return f"D{cells_per_d}" + (f"_r{realisation}" if realisation else "")
+
+
 @dataclass(frozen=True)
 class Setup:
     cells_per_d: int = 8
@@ -45,6 +50,11 @@ class Setup:
     nu_lb: float = 1e-5              # molecular viscosity, negligible next to the eddy viscosity
     precursor_d: float = 12.0        # precursor length in rotor diameters
     storage: str = "fp32"            # population storage: fp32 or fp16
+    realisation: int = 0             # inflow turbulence realisation (precursor seed); 0 = the main runs
+
+    @property
+    def tag(self) -> str:
+        return file_tag(self.cells_per_d, self.realisation)
 
     @property
     def dx(self) -> float:

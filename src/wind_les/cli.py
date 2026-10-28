@@ -9,6 +9,7 @@ Usage:
     python -m wind_les prepare --cells-per-d 8         # disk calibration + spun-up precursor
     python -m wind_les empty --cells-per-d 8           # the same inflow without turbines (reference)
     python -m wind_les sweep --cells-per-d 8 --step 5  # one LES per wind direction (resumable)
+    python -m wind_les prepare --realisation 1         # + empty, sweep: a second inflow realisation
     python -m wind_les single --cells-per-d 8          # one turbine: wake deficit vs distance
     python -m wind_les grid                            # 240 / 300 deg at D/8, D/12, D/16
     python -m wind_les fp16                            # float16 populations: accuracy and speed
@@ -42,17 +43,21 @@ def cmd_verify(a):
     study.step_verify(a.results, a.device)
 
 
+def _setup(a) -> abl.Setup:
+    return abl.Setup(cells_per_d=a.cells_per_d, realisation=a.realisation)
+
+
 def cmd_prepare(a):
-    study.step_prepare(abl.Setup(cells_per_d=a.cells_per_d), a.results, a.device)
+    study.step_prepare(_setup(a), a.results, a.device)
 
 
 def cmd_empty(a):
-    study.step_empty(abl.Setup(cells_per_d=a.cells_per_d), a.results, a.device)
+    study.step_empty(_setup(a), a.results, a.device)
 
 
 def cmd_sweep(a):
     dirs = a.directions if a.directions else np.arange(0.0, 360.0, a.step)
-    study.step_sweep(abl.Setup(cells_per_d=a.cells_per_d), a.results, a.device, dirs, force=a.force)
+    study.step_sweep(_setup(a), a.results, a.device, dirs, force=a.force)
 
 
 def cmd_single(a):
@@ -115,6 +120,8 @@ def main(argv=None):
         p.add_argument("--step", type=float, default=study.DIRECTION_STEP, help="direction step of the sweep [deg]")
         p.add_argument("--directions", type=float, nargs="*", help="explicit wind directions [deg]")
         p.add_argument("--force", action="store_true", help="re-run directions that are already cached")
+        p.add_argument("--realisation", type=int, default=0,
+                       help="inflow turbulence realisation (precursor seed) for prepare / empty / sweep")
     a = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     a.device = _device(a.device)

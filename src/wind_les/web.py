@@ -144,7 +144,7 @@ data and with three PyWake engineering models, on the same records.</p>
 
 <h2>Hub-height flow</h2>
 <p>Instantaneous streamwise speed at hub height, 4 s between frames. The inflow turbulence comes from the
-precursor; every direction sees the same inflow realisation.</p>
+precursor; every direction shown here sees the same inflow realisation (the first of two).</p>
 <div class="viewer">
   <div class="controls">
     <select id="dir" aria-label="wind direction"></select>
@@ -161,10 +161,12 @@ precursor; every direction sees the same inflow realisation.</p>
 <h2>Wake loss per sector</h2>
 <p>Same SCADA records for every source: all six turbines in partial load, free-stream reference speed 5-10 m/s,
 2016-2021. Loss = 1 - farm power / (6 x free-stream turbine power). Whiskers: SCADA 95 % day-bootstrap interval,
-LES &plusmn;2 standard errors from its three 10-minute blocks.</p>
+LES ± 2 standard errors of its six 10-minute blocks from two independent inflow realisations; the circles are the
+two realisations on their own.</p>
 <div class="legend" id="legend"></div>
 <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
 <details><summary>Table</summary><div class="wrap" id="table"></div></details>
+<figure><img src="img/turbine_efficiency.png" alt="Power of each turbine relative to the free-stream reference against wind direction, SCADA, LES and PyWake Gaussian"><figcaption>Each turbine against the free-stream reference. The wake minima agree; unwaked in easterly winds, T2 and T3 produce 5-6 % more than the free-stream reference and the reference turbine T6 6 % less, a site effect that the flat-terrain models do not have and that lowers the measured easterly losses.</figcaption></figure>
 
 <h2>Verification and cost</h2>
 <figure><img src="img/verification.png" alt="Taylor-Green viscosity convergence, actuator disk against momentum theory, inflow log-law profile and turbulence profiles"><figcaption>Analytical checks, actuator disk against momentum theory, inflow profiles.</figcaption></figure>
@@ -185,7 +187,7 @@ const fmt = (v, d = 1) => (v == null || isNaN(v)) ? "-" : Number(v).toFixed(d);
   const s = D.summary, w = s.wake_loss_pct || {}, c = s.les_cost || {};
   const items = [
     [fmt(w.scada, 2) + " %", "SCADA wake loss [" + fmt(w.scada_lo, 1) + "-" + fmt(w.scada_hi, 1) + "]"],
-    [fmt(w.les, 2) + " %", "LES wake loss"],
+    [fmt(w.les, 2) + " %", "LES wake loss" + (w.les_block_se != null ? " [" + fmt(w.les - 2 * w.les_block_se, 1) + "-" + fmt(w.les + 2 * w.les_block_se, 1) + "]" : "")],
     [fmt(w.pywake_gaussian, 2) + " %", "PyWake Gaussian"],
     [fmt(c.median_mlups, 0), "MLUPS (farm + precursor)"],
     [fmt(c.median_wall_s / 60, 1) + " min", "GPU time per direction"],
@@ -252,7 +254,12 @@ const fmt = (v, d = 1) => (v == null || isNaN(v)) ? "-" : Number(v).toFixed(d);
                ["pywake_jensen", "PyWake Jensen", "--s4"], ["pywake_turbopark", "PyWake TurbOPark", "--s5"]].filter(s => s[0] in rows[0]);
   document.getElementById("legend").innerHTML = src.map(s => `<span><i style="background:var(${s[2]})"></i>${s[1]}</span>`).join("");
   const W = 1000, H = 340, m = {l: 44, r: 8, t: 10, b: 30};
-  const top = (r, s) => s[0] === "scada" ? r.scada_hi : s[0] === "les" && r.les_se != null ? r.les + 2 * r.les_se : r[s[0]];
+  // LES interval: 2 standard errors of the 10-minute blocks; the inflow realisations are drawn as circles
+  const lesLo = r => r.les_block_se != null ? r.les - 2 * r.les_block_se : null;
+  const lesHi = r => r.les_block_se != null ? r.les + 2 * r.les_block_se : null;
+  const reals = Object.keys(rows[0]).filter(k => /^les_r\d+$/.test(k));
+  const realTxt = r => reals.length > 1 ? "; realisations " + reals.map(k => fmt(r[k], 1)).join(" / ") : "";
+  const top = (r, s) => s[0] === "scada" ? r.scada_hi : s[0] === "les" && lesHi(r) != null ? lesHi(r) : r[s[0]];
   const ymax = Math.ceil(Math.max(...rows.flatMap(r => src.map(s => top(r, s)))) / 5) * 5;
   const gw = (W - m.l - m.r) / rows.length, bw = gw * 0.8 / src.length;
   const y = v => m.t + (H - m.t - m.b) * (1 - v / ymax);
@@ -265,7 +272,8 @@ const fmt = (v, d = 1) => (v == null || isNaN(v)) ? "-" : Number(v).toFixed(d);
       const v = r[s[0]], x = x0 + j * bw;
       g += `<rect data-i="${i}" x="${x + 1}" y="${y(Math.max(v, 0))}" width="${bw - 2}" height="${Math.abs(y(0) - y(v))}" rx="2" fill="var(${s[2]})"/>`;
       if (s[0] === "scada") g += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y(r.scada_lo)}" y2="${y(r.scada_hi)}" stroke="var(--ink)" stroke-width="1.4"/>`;
-      if (s[0] === "les" && r.les_se != null) g += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y(v - 2 * r.les_se)}" y2="${y(v + 2 * r.les_se)}" stroke="var(--ink)" stroke-width="1.4"/>`;
+      if (s[0] === "les" && lesLo(r) != null) g += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y(lesLo(r))}" y2="${y(lesHi(r))}" stroke="var(--ink)" stroke-width="1.4"/>`;
+      if (s[0] === "les" && reals.length > 1) reals.forEach(k => g += `<circle cx="${x + bw / 2}" cy="${y(r[k])}" r="2.6" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.2"/>`);
     });
     g += `<rect data-i="${i}" x="${m.l + i * gw}" y="${m.t}" width="${gw}" height="${H - m.t - m.b}" fill="transparent"/>`;
     g += `<text x="${m.l + (i + 0.5) * gw}" y="${H - 10}" text-anchor="middle" font-size="11" fill="var(--ink2)">${r.sector_deg === "all" ? "all" : r.sector_deg + "°"}</text>`;
@@ -279,7 +287,7 @@ const fmt = (v, d = 1) => (v == null || isNaN(v)) ? "-" : Number(v).toFixed(d);
     const r = rows[+i], b = box.getBoundingClientRect();
     tip.innerHTML = `<b>${r.sector_deg === "all" ? "all sectors" : "sector " + r.sector_deg + "°"}</b> · ${r.records} records<br>` +
       src.map(s => `${s[1]}: ${fmt(r[s[0]], 1)} %` + (s[0] === "scada" ? ` [${fmt(r.scada_lo, 1)}-${fmt(r.scada_hi, 1)}]` : "") +
-        (s[0] === "les" && r.les_se != null ? ` ± ${fmt(2 * r.les_se, 1)}` : "")).join("<br>");
+        (s[0] === "les" && lesLo(r) != null ? ` [${fmt(lesLo(r), 1)}-${fmt(lesHi(r), 1)}]${realTxt(r)}` : "")).join("<br>");
     tip.style.display = "block";
     tip.style.left = Math.min(e.clientX - b.left + 12, b.width - tip.offsetWidth - 4) + "px";
     tip.style.top = (e.clientY - b.top + 12) + "px";
@@ -287,7 +295,8 @@ const fmt = (v, d = 1) => (v == null || isNaN(v)) ? "-" : Number(v).toFixed(d);
   box.addEventListener("mouseleave", () => tip.style.display = "none");
   document.getElementById("table").innerHTML = "<table><tr><th>sector</th><th>records</th>" + src.map(s => `<th>${s[1]}</th>`).join("") + "</tr>" +
     rows.map(r => `<tr><td>${r.sector_deg}</td><td>${r.records}</td>` + src.map(s => `<td>${fmt(r[s[0]], 2)}` +
-      (s[0] === "scada" ? ` [${fmt(r.scada_lo, 1)}-${fmt(r.scada_hi, 1)}]` : "") + "</td>").join("") + "</tr>").join("") + "</table>";
+      (s[0] === "scada" ? ` [${fmt(r.scada_lo, 1)}-${fmt(r.scada_hi, 1)}]` : "") +
+      (s[0] === "les" && lesLo(r) != null ? ` [${fmt(lesLo(r), 1)}-${fmt(lesHi(r), 1)}]${realTxt(r)}` : "") + "</td>").join("") + "</tr>").join("") + "</table>";
 })();
 </script>
 </body>

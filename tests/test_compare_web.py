@@ -58,12 +58,37 @@ def test_sector_losses_bootstrap():
     assert total["scada"] == pytest.approx(100 * 200 * (~free[:, 5]).sum() / (6000 * n), rel=1e-6)
     assert total["scada_lo"] <= total["scada"] <= total["scada_hi"]
     assert total["flat"] == pytest.approx(0.0, abs=1e-9)
+    # the farm loss of a sector is the mean of its six turbine losses
+    turb = compare.turbine_sector_losses(rec, {"flat": table})
+    mean = turb.groupby("sector_deg")["scada"].mean()
+    assert mean["all"] == pytest.approx(total["scada"], rel=1e-9)
+    by_sector = out.set_index(out["sector_deg"].astype(str))["scada"]
+    assert all(mean[s] == pytest.approx(by_sector[str(s)], rel=1e-9) for s in mean.index)
+
+
+def test_les_realisations_need_the_same_directions(tmp_path):
+    from wind_les import report
+    ratios = pd.DataFrame({"wd": [0.0, 0.0, 5.0], "block": [0, 1, 0], "turbine": 1, "s": 1.0})
+    ratios.to_csv(tmp_path / "les_ratios_D8.csv", index=False)
+    ratios.to_csv(tmp_path / "les_ratios_D8_r1.csv", index=False)
+    ratios[ratios["wd"] == 0.0].to_csv(tmp_path / "les_ratios_D8_r2.csv", index=False)   # unfinished sweep
+    assert report.les_realisations(tmp_path) == [0, 1]
+
+
+def test_unwaked_by_half_weights_records():
+    from wind_les import report
+    turb = pd.DataFrame({"turbine": 1, "bin": [10.0, 20.0, 200.0, 210.0], "scada": [1.1, 1.0, 1.0, 0.9],
+                         "records": [300, 900, 400, 50], "les": [1.0, 1.0, 1.0, 0.5], "pywake_gaussian": 1.0})
+    out = report.unwaked_by_half(turb).set_index("winds")
+    assert out.loc["easterly (0-175)", "scada"] == pytest.approx((1.1 * 300 + 1.0 * 900) / 1200)
+    assert out.loc["westerly (180-355)", "bins"] == 1                  # waked in the LES, and too few records
 
 
 def _fake_results(tmp_path):
     res = tmp_path / "results"
     res.mkdir()
     rows = [{"sector_deg": s, "records": 100, "days": 10, "scada": 5.0, "scada_lo": 4.0, "scada_hi": 6.0, "les": 6.0,
+             "les_r0": 5.8, "les_r1": 6.2, "les_block_se": 0.3,
              "pywake_gaussian": 5.5, "pywake_jensen": 7.0, "pywake_turbopark": 7.5} for s in range(0, 360, 30)]
     rows.append({**rows[0], "sector_deg": "all"})
     pd.DataFrame(rows).to_csv(res / "sector_losses.csv", index=False)

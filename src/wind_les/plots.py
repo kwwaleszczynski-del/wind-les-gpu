@@ -177,13 +177,27 @@ def sector_losses(results: Path, out: Path) -> None:
         if name == "scada":
             ax.errorbar(pos, df["scada"], yerr=[df["scada"] - df["scada_lo"], df["scada_hi"] - df["scada"]],
                         fmt="none", ecolor=INK, elinewidth=1.1, capsize=2.5)
-        if name == "les" and "les_se" in df:
-            ax.errorbar(pos, df["les"], yerr=2 * df["les_se"], fmt="none", ecolor=INK, elinewidth=1.1, capsize=2.5)
+        if name == "les":
+            ax.errorbar(pos, df["les"], yerr=2 * df.get("les_block_se", 0.0), fmt="none", ecolor=INK,
+                        elinewidth=1.1, capsize=2.5)
+            reals = [c for c in df.columns if c.startswith("les_r")]
+            for j, c in enumerate(reals if len(reals) > 1 else []):
+                ax.plot(pos, df[c], ls="none", marker="o", ms=4, mfc=SURFACE, mec=INK, mew=1.0,
+                        label="LES inflow realisations" if j == 0 else None)
     labels = [f"{s} deg" if s != "all" else "all" for s in df["sector_deg"].astype(str)]
     ax.set_xticks(x, labels)
     ax.axvline(len(df) - 1.5, color=MUTED, lw=0.8)
     ax.set(ylabel="wake loss [%]", title="Wake loss per 30-degree sector, same SCADA records for every source")
-    ax.legend(ncol=5, loc="upper left")
+    # realisation markers right after the LES bar in the legend, and headroom so the legend clears the bars
+    handles, labels = ax.get_legend_handles_labels()
+    if "LES inflow realisations" in labels:
+        k = labels.index("LES inflow realisations")
+        h, lab = handles.pop(k), labels.pop(k)
+        j = labels.index(SOURCES["les"][0]) + 1
+        handles.insert(j, h)
+        labels.insert(j, lab)
+    ax.legend(handles, labels, ncol=6, loc="upper left")
+    ax.set_ylim(0, 1.13 * df[names].to_numpy().max())
     ax.grid(axis="x", visible=False)
     _save(fig, out / "sector_losses.png")
 
@@ -204,6 +218,35 @@ def efficiency_direction(results: Path, out: Path) -> None:
     ax.set_xticks(np.arange(0, 361, 30))
     ax.legend(ncol=5, loc="lower left")
     _save(fig, out / "efficiency_direction.png")
+
+
+def turbine_efficiency(results: Path, out: Path) -> None:
+    path = results / "turbine_efficiency.csv"
+    if not path.exists():
+        return
+    df = pd.read_csv(path)
+    df = df[df["records"] >= 100]
+    fig, axes = plt.subplots(2, 3, figsize=(12, 6.0), sharex=True, sharey=True)
+    for ax, (t, g) in zip(axes.flat, df.groupby("turbine")):
+        ax.axvspan(45, 165, color=GRID, alpha=0.6, lw=0)
+        c = SOURCES["scada"][1]
+        ax.fill_between(g["bin"], g["scada"] - g["scada_ci95"], g["scada"] + g["scada_ci95"], color=c, alpha=0.2,
+                        lw=0)
+        for name in ("scada", "les", "pywake_gaussian"):
+            label, c = SOURCES[name]
+            ax.plot(g["bin"], g[name], color=c, lw=1.3 if name == "pywake_gaussian" else 2.0, label=label)
+        ax.set_title(f"T{t}")
+        ax.set_xticks(np.arange(0, 361, 90))
+        ax.set_xlim(0, 360)
+    for ax in axes[1]:
+        ax.set_xlabel("wind direction [deg]")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("power / free-stream reference")
+    axes[0, 0].legend(loc="lower left", fontsize=8)
+    fig.suptitle("Each turbine against the free-stream reference (5-degree bins; shaded: sectors 60-150 deg)",
+                 fontweight="bold", fontsize=10.5)
+    fig.tight_layout()
+    _save(fig, out / "turbine_efficiency.png")
 
 
 def performance(results: Path, out: Path) -> None:
@@ -271,8 +314,8 @@ def grid_convergence(results: Path, out: Path) -> None:
 
 
 def all_figures(results: Path, out: Path) -> None:
-    for fn in (verification, hub_plane, wake_deficit, sector_losses, efficiency_direction, performance,
-               grid_convergence):
+    for fn in (verification, hub_plane, wake_deficit, sector_losses, efficiency_direction, turbine_efficiency,
+               performance, grid_convergence):
         try:
             fn(results, out)
         except FileNotFoundError as exc:

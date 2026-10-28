@@ -20,6 +20,13 @@ def test_setup_scaling():
     assert s.k_at(0.5 * s.dx) == pytest.approx(0.0)
 
 
+def test_realisation_file_names(tmp_path):
+    from wind_les import study
+    assert abl.Setup().tag == "D8" and abl.Setup(cells_per_d=12, realisation=2).tag == "D12_r2"
+    assert study.run_path(tmp_path, 8, 240.0).parent.name == "les_D8"
+    assert study.run_path(tmp_path, 8, 240.0, 1).parent.name == "les_D8_r1"
+
+
 def test_precursor_runs_and_stays_finite():
     s = abl.Setup(cells_per_d=4, height_m=184.0, precursor_d=4.0)
     pre = abl.make_precursor(s, ny=8, device=DEVICE)

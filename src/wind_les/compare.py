@@ -131,6 +131,38 @@ def sector_losses(rec: dict, tables: dict[str, np.ndarray], width: float = SECTO
     return pd.concat([out, pd.DataFrame([total])], ignore_index=True)
 
 
+def turbine_sector_losses(rec: dict, tables: dict[str, np.ndarray], width: float = SECTOR_DEG) -> pd.DataFrame:
+    """Loss of each turbine against the free-stream reference [%] per sector, for SCADA and each table.
+
+    The farm loss of a sector is the mean of its six turbine losses, so this splits a difference between a model
+    and the SCADA into the turbines that cause it.
+    """
+    sector = sector_of(rec["wd"], width)
+    norms = {"scada": rec["measured"], **{name: model_norm(rec, t) for name, t in tables.items()}}
+    out = None
+    for name, norm in norms.items():
+        p = pd.DataFrame(norm["p"], columns=range(1, norm["p"].shape[1] + 1)).assign(ref=norm["ref"], sector=sector)
+        sums = p.groupby("sector").sum()
+        sums.loc["all"] = p.drop(columns="sector").sum()
+        loss = 100 * (1 - sums.drop(columns="ref").div(sums["ref"], axis=0))
+        long = loss.rename_axis("sector_deg").reset_index().melt(id_vars="sector_deg", var_name="turbine",
+                                                                 value_name=name)
+        out = long if out is None else out.merge(long, on=["sector_deg", "turbine"])
+    return out
+
+
+def turbine_efficiency(rec: dict, tables: dict[str, np.ndarray], width: float = 5.0) -> pd.DataFrame:
+    """Normalised power of each turbine (power / free-stream reference) per direction bin, SCADA with a 95 % CI."""
+    _, _, validation, _ = _wws()
+    out = validation.binned_ratio(rec["measured"], rec["wd"], rec["days"], width)
+    out = out.rename(columns={"ratio": "scada", "ci95": "scada_ci95", "n": "records"})
+    for name, table in tables.items():
+        out[name] = validation.binned_ratio(model_norm(rec, table), rec["wd"], width=width)["ratio"]
+    out = out.reset_index()
+    out["turbine"] += 1
+    return out
+
+
 def efficiency_by_direction(rec: dict, tables: dict[str, np.ndarray], width: float = 2.0) -> pd.DataFrame:
     """Farm efficiency per direction bin for SCADA and each table (for the direction plot)."""
     _, _, validation, _ = _wws()
