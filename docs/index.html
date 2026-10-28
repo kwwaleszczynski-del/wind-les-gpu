@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kelmarsh GPU LES</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="Home-made lattice Boltzmann LES of the Kelmarsh wind farm on a laptop GPU, compared with SCADA and PyWake.">
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb; --panel: #f3f2ef; --ink: #0b0b0b; --ink2: #52514e; --muted: #8a8984; --rule: #e4e3df;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #1a1a19; --panel: #242422; --ink: #f0efec; --ink2: #c3c2b7; --muted: #8f8e88; --rule: #34332f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #1a1a19; --panel: #242422; --ink: #f0efec; --ink2: #c3c2b7; --muted: #8f8e88; --rule: #34332f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface); color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1060px; margin: 0 auto; padding: 28px 16px 56px; }
+h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 6px; }
+h2 { font-size: 1.15rem; margin: 36px 0 8px; }
+p { color: var(--ink2); margin: 6px 0 10px; max-width: 74ch; }
+a { color: var(--accent); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 20px 0 8px; }
+.kpi { background: var(--panel); border-radius: 8px; padding: 10px 12px; }
+.kpi b { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.kpi span { color: var(--ink2); font-size: .82rem; }
+.viewer { background: var(--panel); border-radius: 10px; padding: 12px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; }
+.controls button, .controls select { font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.controls input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
+.controls .t { color: var(--ink2); font-variant-numeric: tabular-nums; min-width: 7ch; }
+canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: #000; }
+.scale { display: flex; align-items: center; gap: 8px; color: var(--ink2); font-size: .8rem; margin-top: 8px; }
+.scale canvas { height: 10px; width: 220px; border-radius: 2px; }
+figure { margin: 14px 0; }
+figure img { width: 100%; height: auto; border-radius: 6px; }
+figcaption { color: var(--ink2); font-size: .85rem; }
+.chart { position: relative; }
+.chart svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: var(--ink2); margin: 6px 0; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule);
+  border-radius: 6px; padding: 6px 9px; font-size: .8rem; box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none; white-space: nowrap; }
+table { border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; width: 100%; }
+th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--rule); }
+th:first-child, td:first-child { text-align: left; }
+details { margin-top: 8px; color: var(--ink2); }
+.wrap { overflow-x: auto; }
+footer { margin-top: 40px; color: var(--muted); font-size: .8rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Kelmarsh wind farm in a laptop-GPU LES</h1>
+<p>A home-made lattice Boltzmann large-eddy simulation (D3Q19, regularized collision, Smagorinsky) written in
+NVIDIA Warp and run on a 6 GB Quadro RTX 3000. The six Senvion MM92 turbines are actuator disks in a neutral
+boundary layer fed by a periodic precursor. Wake losses per wind sector are compared with the farm's open SCADA
+data and with three PyWake engineering models, on the same records.</p>
+<div class="kpis" id="kpis"></div>
+
+<h2>Hub-height flow</h2>
+<p>Instantaneous streamwise speed at hub height, 4 s between frames. The inflow turbulence comes from the
+precursor; every direction sees the same inflow realisation.</p>
+<div class="viewer">
+  <div class="controls">
+    <select id="dir" aria-label="wind direction"></select>
+    <button id="play" type="button">Pause</button>
+    <button id="mode" type="button">Show 30-min mean</button>
+    <input id="frame" type="range" min="0" max="0" value="0" aria-label="frame">
+    <span class="t" id="time"></span>
+  </div>
+  <canvas id="cv" width="640" height="520"></canvas>
+  <div class="scale"><span id="vmin"></span><canvas id="bar" width="256" height="1"></canvas><span id="vmax"></span>
+    <span>U / U<sub>hub</sub>, downwind to the right</span></div>
+</div>
+
+<h2>Wake loss per sector</h2>
+<p>Same SCADA records for every source: all six turbines in partial load, free-stream reference speed 5-10 m/s,
+2016-2021. Loss = 1 - farm power / (6 x free-stream turbine power). Whiskers: SCADA 95 % day-bootstrap interval,
+LES &plusmn;2 standard errors from its three 10-minute blocks.</p>
+<div class="legend" id="legend"></div>
+<div class="chart" id="chart"><div class="tip" id="tip"></div></div>
+<details><summary>Table</summary><div class="wrap" id="table"></div></details>
+
+<h2>Verification and cost</h2>
+<figure><img src="img/verification.png" alt="Taylor-Green viscosity convergence, actuator disk against momentum theory, inflow log-law profile and turbulence profiles"><figcaption>Analytical checks, actuator disk against momentum theory, inflow profiles.</figcaption></figure>
+<figure><img src="img/wake_deficit.png" alt="Centreline wake deficit behind one turbine against distance, LES and PyWake models"><figcaption>Single-wake deficit behind one turbine.</figcaption></figure>
+<figure><img src="img/efficiency_direction.png" alt="Farm efficiency against wind direction for SCADA, LES and PyWake"><figcaption>Farm efficiency by wind direction.</figcaption></figure>
+<figure><img src="img/grid_convergence.png" alt="Turbine power ratios at three grid resolutions"><figcaption>Grid convergence.</figcaption></figure>
+<figure><img src="img/performance.png" alt="Throughput in million lattice updates per second and run time per direction"><figcaption>Throughput and cost.</figcaption></figure>
+<footer>Data: Kelmarsh wind farm data, C. Plumley and R. Takeuchi, Cubico Sustainable Investments,
+doi:10.5281/zenodo.16807551, CC-BY-4.0. Engineering models: PyWake (DTU). Code: MIT.</footer>
+</main>
+<script>
+const D = {"anim":[{"wd":240.0,"file":"data/frames_240.bin","mean":"data/mean_240.bin","frames":60,"nx":213,"ny":173,"dt_s":3.992438529216098,"dx_m":11.5,"z_m":74.75,"turbines":[[61.3161834442069,90.70647431737927],[58.49810735088323,114.07166487490511],[91.96767083718575,109.07264472477173],[83.070000072805,57.79318367818452],[103.25334995324766,85.51912867424222],[118.12097572672633,58.836903730279445]],"radius":4.0},{"wd":300.0,"file":"data/frames_300.bin","mean":"data/mean_300.bin","frames":60,"nx":213,"ny":173,"dt_s":3.992438529216098,"dx_m":11.5,"z_m":74.75,"turbines":[[69.60102268309338,66.94376318832907],[47.957136049349884,76.18583298047608],[69.02119623654693,102.67181513812343],[108.98167681307567,69.32647569836602],[95.06197904278096,100.66874192632784],[125.60327656048287,100.20337106813923]],"radius":4.0}],"lut":["#08306b","#08316d","#08326e","#083370","#083471","#083573","#083674","#083776","#083877","#083979","#083a7a","#083b7c","#083c7d","#083d7f","#083e81","#084082","#084184","#084285","#084387","#084488","#08458a","#08468b","#08478d","#08488e","#084990","#084a91","#084b93","#084c95","#084d96","#084e98","#084f99","#08509b","#08519c","#09529d","#0a539e","#0a549e","#0b559f","#0c56a0","#0d57a1","#0e58a2","#0e59a2","#0f5aa3","#105ba4","#115ca5","#125da6","#125ea6","#135fa7","#1460a8","#1561a9","#1562a9","#1663aa","#1764ab","#1865ac","#1966ad","#1967ad","#1a68ae","#1b69af","#1c6ab0","#1c6bb0","#1d6cb1","#1e6db2","#1f6eb3","#206fb4","#2070b4","#2171b5","#2272b6","#2373b6","#2474b7","#2575b7","#2676b8","#2777b8","#2979b9","#2a7ab9","#2b7bba","#2c7cba","#2d7dbb","#2e7ebc","#2f7fbc","#3080bd","#3181bd","#3282be","#3383be","#3484bf","#3585bf","#3686c0","#3787c0","#3888c1","#3989c1","#3a8ac2","#3b8bc2","#3c8cc3","#3d8dc4","#3e8ec4","#3f8fc5","#4090c5","#4191c6","#4292c6","#4493c7","#4594c7","#4695c8","#4896c8","#4997c9","#4a98c9","#4b98ca","#4d99ca","#4e9acb","#4f9bcb","#519ccc","#529dcc","#539ecd","#549fcd","#56a0ce","#57a0ce","#58a1cf","#5aa2cf","#5ba3d0","#5ca4d0","#5da5d1","#5fa6d1","#60a7d2","#61a7d2","#63a8d3","#64a9d3","#65aad4","#66abd4","#68acd5","#69add5","#6aaed6","#6caed6","#6dafd7","#6fb0d7","#71b1d7","#72b2d8","#74b3d8","#75b4d8","#77b5d9","#79b5d9","#7ab6d9","#7cb7da","#7db8da","#7fb9da","#81badb","#82bbdb","#84bcdb","#85bcdc","#87bddc","#89bedc","#8abfdd","#8cc0dd","#8dc1dd","#8fc2de","#91c3de","#92c4de","#94c4df","#95c5df","#97c6df","#99c7e0","#9ac8e0","#9cc9e1","#9dcae1","#9fcae1","#a0cbe2","#a1cbe2","#a3cce3","#a4cce3","#a5cde3","#a6cee4","#a8cee4","#a9cfe5","#aacfe5","#abd0e6","#add0e6","#aed1e7","#afd1e7","#b0d2e7","#b2d2e8","#b3d3e8","#b4d3e9","#b5d4e9","#b7d4ea","#b8d5ea","#b9d6ea","#bad6eb","#bcd7eb","#bdd7ec","#bed8ec","#bfd8ed","#c1d9ed","#c2d9ee","#c3daee","#c4daee","#c6dbef","#c7dbef","#c7dcef","#c8dcf0","#c9ddf0","#caddf0","#cadef0","#cbdef1","#ccdff1","#cddff1","#cde0f1","#cee0f2","#cfe1f2","#d0e1f2","#d0e2f2","#d1e2f3","#d2e3f3","#d3e3f3","#d3e4f3","#d4e4f4","#d5e5f4","#d6e5f4","#d6e6f4","#d7e6f5","#d8e7f5","#d9e7f5","#d9e8f5","#dae8f6","#dbe9f6","#dce9f6","#dceaf6","#ddeaf7","#deebf7","#dfebf7","#dfecf7","#e0ecf8","#e1edf8","#e2edf8","#e3eef8","#e3eef9","#e4eff9","#e5eff9","#e6f0f9","#e7f0fa","#e7f1fa","#e8f1fa","#e9f2fa","#eaf2fb","#eaf3fb","#ebf3fb","#ecf4fb","#edf4fc","#eef5fc","#eef5fc","#eff6fc","#f0f6fd","#f1f7fd","#f2f7fd","#f2f8fd","#f3f8fe","#f4f9fe","#f5f9fe","#f5fafe","#f6faff","#f7fbff"],"vmin":0.2,"vmax":1.4,"summary":{"scada_records":159289,"scada_days":1913,"ambient_ti_scada":0.1267,"ti_les_hub":0.1338,"les_direction_step_deg":5.0,"les_directions":72,"wake_loss_pct":{"scada":9.24,"scada_lo":8.98,"scada_hi":9.52,"les":9.79,"pywake_jensen":11.44,"pywake_gaussian":9.69,"pywake_turbopark":12.13,"les_se":0.11},"sector_skill":{"les":{"rmse_pp":2.24,"bias_pp":1.28,"within_scada_ci":2},"pywake_jensen":{"rmse_pp":3.69,"bias_pp":3.09,"within_scada_ci":0},"pywake_gaussian":{"rmse_pp":2.57,"bias_pp":1.36,"within_scada_ci":1},"pywake_turbopark":{"rmse_pp":4.37,"bias_pp":3.8,"within_scada_ci":0}},"sampling_bias_pct":0.0,"les_cost":{"cells":2138280,"median_wall_s":80.886,"median_mlups":921.6800000000001,"total_gpu_h":1.714011666666667,"gpu_mb":1520.7}},"sectors":[{"sector_deg":"0","records":7120,"days":322,"scada":5.361,"scada_lo":5.013,"scada_hi":5.687,"les":4.84,"pywake_jensen":6.045,"pywake_gaussian":5.239,"pywake_turbopark":6.376,"les_se":0.199},{"sector_deg":"30","records":10791,"days":322,"scada":3.26,"scada_lo":2.66,"scada_hi":3.818,"les":3.582,"pywake_jensen":5.96,"pywake_gaussian":4.866,"pywake_turbopark":5.841,"les_se":0.242},{"sector_deg":"60","records":7733,"days":301,"scada":7.78,"scada_lo":6.922,"scada_hi":8.622,"les":10.822,"pywake_jensen":13.275,"pywake_gaussian":11.021,"pywake_turbopark":14.51,"les_se":0.093},{"sector_deg":"90","records":6041,"days":259,"scada":2.132,"scada_lo":1.377,"scada_hi":2.935,"les":6.593,"pywake_jensen":8.62,"pywake_gaussian":7.446,"pywake_turbopark":9.757,"les_se":0.342},{"sector_deg":"120","records":4622,"days":251,"scada":19.708,"scada_lo":18.772,"scada_hi":20.712,"les":22.657,"pywake_jensen":24.394,"pywake_gaussian":20.926,"pywake_turbopark":25.385,"les_se":0.562},{"sector_deg":"150","records":6606,"days":369,"scada":5.917,"scada_lo":5.492,"scada_hi":6.282,"les":9.746,"pywake_jensen":11.709,"pywake_gaussian":10.263,"pywake_turbopark":12.327,"les_se":0.216},{"sector_deg":"180","records":14731,"days":615,"scada":3.721,"scada_lo":3.399,"scada_hi":4.052,"les":4.922,"pywake_jensen":6.611,"pywake_gaussian":5.686,"pywake_turbopark":7.109,"les_se":0.316},{"sector_deg":"210","records":28137,"days":902,"scada":3.879,"scada_lo":3.68,"scada_hi":4.08,"les":5.657,"pywake_jensen":6.541,"pywake_gaussian":5.411,"pywake_turbopark":6.533,"les_se":0.131},{"sector_deg":"240","records":29728,"days":957,"scada":14.385,"scada_lo":13.951,"scada_hi":14.822,"les":13.28,"pywake_jensen":14.906,"pywake_gaussian":12.399,"pywake_turbopark":16.105,"les_se":0.658},{"sector_deg":"270","records":19019,"days":856,"scada":8.154,"scada_lo":7.869,"scada_hi":8.482,"les":7.063,"pywake_jensen":8.889,"pywake_gaussian":7.43,"pywake_turbopark":9.52,"les_se":0.388},{"sector_deg":"300","records":16219,"days":645,"scada":22.2,"scada_lo":21.712,"scada_hi":22.679,"les":22.089,"pywake_jensen":23.475,"pywake_gaussian":20.327,"pywake_turbopark":24.963,"les_se":0.604},{"sector_deg":"330","records":8542,"days":466,"scada":9.044,"scada_lo":8.694,"scada_hi":9.442,"les":9.615,"pywake_jensen":12.165,"pywake_gaussian":10.861,"pywake_turbopark":12.715,"les_se":0.421},{"sector_deg":"all","records":159289,"days":1913,"scada":9.242,"scada_lo":8.975,"scada_hi":9.521,"les":9.785,"pywake_jensen":11.444,"pywake_gaussian":9.692,"pywake_turbopark":12.133,"les_se":0.114}]};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = (v, d = 1) => (v == null || isNaN(v)) ? "-" : Number(v).toFixed(d);
+
+// KPI row
+(function () {
+  const s = D.summary, w = s.wake_loss_pct || {}, c = s.les_cost || {};
+  const items = [
+    [fmt(w.scada, 2) + " %", "SCADA wake loss [" + fmt(w.scada_lo, 1) + "-" + fmt(w.scada_hi, 1) + "]"],
+    [fmt(w.les, 2) + " %", "LES wake loss"],
+    [fmt(w.pywake_gaussian, 2) + " %", "PyWake Gaussian"],
+    [fmt(c.median_mlups, 0), "MLUPS (farm + precursor)"],
+    [fmt(c.median_wall_s / 60, 1) + " min", "GPU time per direction"],
+  ];
+  document.getElementById("kpis").innerHTML = items.map(([b, t]) => `<div class="kpi"><b>${b}</b><span>${t}</span></div>`).join("");
+})();
+
+// animation
+(function () {
+  const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  const sel = document.getElementById("dir"), slider = document.getElementById("frame");
+  const play = document.getElementById("play"), mode = document.getElementById("mode"), tlabel = document.getElementById("time");
+  const lut = D.lut.map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+  const bar = document.getElementById("bar").getContext("2d"), bimg = bar.createImageData(256, 1);
+  lut.forEach((c, i) => bimg.data.set([c[0], c[1], c[2], 255], 4 * i));
+  bar.putImageData(bimg, 0, 0);
+  document.getElementById("vmin").textContent = D.vmin; document.getElementById("vmax").textContent = D.vmax;
+  if (!D.anim.length) { cv.replaceWith(Object.assign(document.createElement("p"), {textContent: "No animation data."})); return; }
+  D.anim.forEach((a, i) => sel.add(new Option("wind from " + a.wd + " deg", i)));
+  let cur = null, frames = null, mean = null, k = 0, playing = true, showMean = false, off = null, img = null;
+  async function load(i) {
+    cur = D.anim[i];
+    const [f, m] = await Promise.all([fetch(cur.file), fetch(cur.mean)].map(p => p.then(r => r.arrayBuffer())));
+    frames = new Uint8Array(f); mean = new Uint8Array(m);
+    off = document.createElement("canvas"); off.width = cur.nx; off.height = cur.ny;
+    img = off.getContext("2d").createImageData(cur.nx, cur.ny);
+    const scale = Math.min(1060, cur.nx * 4) / cur.nx;
+    cv.width = Math.round(cur.nx * scale); cv.height = Math.round(cur.ny * scale);
+    slider.max = cur.frames - 1; k = 0; draw();
+  }
+  function draw() {
+    if (!cur) return;
+    const n = cur.nx * cur.ny, src = showMean ? mean : frames.subarray(k * n, (k + 1) * n);
+    for (let j = 0; j < cur.ny; j++) for (let i = 0; i < cur.nx; i++) {
+      const v = src[j * cur.nx + i], c = lut[v], p = 4 * ((cur.ny - 1 - j) * cur.nx + i);
+      img.data[p] = c[0]; img.data[p + 1] = c[1]; img.data[p + 2] = c[2]; img.data[p + 3] = 255;
+    }
+    off.getContext("2d").putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, 0, 0, cv.width, cv.height);
+    const s = cv.width / cur.nx;
+    ctx.strokeStyle = "#0b0b0b"; ctx.lineWidth = Math.max(2, s * 0.6); ctx.lineCap = "round";
+    ctx.fillStyle = "#0b0b0b"; ctx.font = `${Math.max(11, s * 3)}px system-ui, sans-serif`;
+    cur.turbines.forEach(([x, y], t) => {
+      const px = (x + 0.5) * s, py = cv.height - (y + 0.5) * s, r = cur.radius * s;
+      ctx.beginPath(); ctx.moveTo(px, py - r); ctx.lineTo(px, py + r); ctx.stroke();
+      ctx.fillText("T" + (t + 1), px + 4, py - r - 3);
+    });
+    slider.value = k;
+    tlabel.textContent = showMean ? "mean" : "t = " + Math.round(k * cur.dt_s) + " s";
+  }
+  sel.onchange = () => load(+sel.value);
+  slider.oninput = () => { k = +slider.value; draw(); };
+  play.onclick = () => { playing = !playing; play.textContent = playing ? "Pause" : "Play"; };
+  mode.onclick = () => { showMean = !showMean; mode.textContent = showMean ? "Show instantaneous" : "Show 30-min mean"; draw(); };
+  setInterval(() => { if (playing && !showMean && frames) { k = (k + 1) % cur.frames; draw(); } }, 120);
+  load(0);
+})();
+
+// sector chart: grouped bars with hover tooltip and a table view
+(function () {
+  const rows = D.sectors; if (!rows.length) return;
+  const src = [["scada", "SCADA", "--s1"], ["les", "LES (this work)", "--s2"], ["pywake_gaussian", "PyWake Gaussian", "--s3"],
+               ["pywake_jensen", "PyWake Jensen", "--s4"], ["pywake_turbopark", "PyWake TurbOPark", "--s5"]].filter(s => s[0] in rows[0]);
+  document.getElementById("legend").innerHTML = src.map(s => `<span><i style="background:var(${s[2]})"></i>${s[1]}</span>`).join("");
+  const W = 1000, H = 340, m = {l: 44, r: 8, t: 10, b: 30};
+  const top = (r, s) => s[0] === "scada" ? r.scada_hi : s[0] === "les" && r.les_se != null ? r.les + 2 * r.les_se : r[s[0]];
+  const ymax = Math.ceil(Math.max(...rows.flatMap(r => src.map(s => top(r, s)))) / 5) * 5;
+  const gw = (W - m.l - m.r) / rows.length, bw = gw * 0.8 / src.length;
+  const y = v => m.t + (H - m.t - m.b) * (1 - v / ymax);
+  let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Wake loss per sector">`;
+  for (let v = 0; v <= ymax; v += 5) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)"/>` +
+    `<text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--ink2)">${v}%</text>`;
+  rows.forEach((r, i) => {
+    const x0 = m.l + i * gw + gw * 0.1;
+    src.forEach((s, j) => {
+      const v = r[s[0]], x = x0 + j * bw;
+      g += `<rect data-i="${i}" x="${x + 1}" y="${y(Math.max(v, 0))}" width="${bw - 2}" height="${Math.abs(y(0) - y(v))}" rx="2" fill="var(${s[2]})"/>`;
+      if (s[0] === "scada") g += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y(r.scada_lo)}" y2="${y(r.scada_hi)}" stroke="var(--ink)" stroke-width="1.4"/>`;
+      if (s[0] === "les" && r.les_se != null) g += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y(v - 2 * r.les_se)}" y2="${y(v + 2 * r.les_se)}" stroke="var(--ink)" stroke-width="1.4"/>`;
+    });
+    g += `<rect data-i="${i}" x="${m.l + i * gw}" y="${m.t}" width="${gw}" height="${H - m.t - m.b}" fill="transparent"/>`;
+    g += `<text x="${m.l + (i + 0.5) * gw}" y="${H - 10}" text-anchor="middle" font-size="11" fill="var(--ink2)">${r.sector_deg === "all" ? "all" : r.sector_deg + "°"}</text>`;
+  });
+  g += "</svg>";
+  const box = document.getElementById("chart"), tip = document.getElementById("tip");
+  box.insertAdjacentHTML("beforeend", g);
+  box.addEventListener("mousemove", e => {
+    const i = e.target.getAttribute && e.target.getAttribute("data-i");
+    if (i == null) { tip.style.display = "none"; return; }
+    const r = rows[+i], b = box.getBoundingClientRect();
+    tip.innerHTML = `<b>${r.sector_deg === "all" ? "all sectors" : "sector " + r.sector_deg + "°"}</b> · ${r.records} records<br>` +
+      src.map(s => `${s[1]}: ${fmt(r[s[0]], 1)} %` + (s[0] === "scada" ? ` [${fmt(r.scada_lo, 1)}-${fmt(r.scada_hi, 1)}]` : "") +
+        (s[0] === "les" && r.les_se != null ? ` ± ${fmt(2 * r.les_se, 1)}` : "")).join("<br>");
+    tip.style.display = "block";
+    tip.style.left = Math.min(e.clientX - b.left + 12, b.width - tip.offsetWidth - 4) + "px";
+    tip.style.top = (e.clientY - b.top + 12) + "px";
+  });
+  box.addEventListener("mouseleave", () => tip.style.display = "none");
+  document.getElementById("table").innerHTML = "<table><tr><th>sector</th><th>records</th>" + src.map(s => `<th>${s[1]}</th>`).join("") + "</tr>" +
+    rows.map(r => `<tr><td>${r.sector_deg}</td><td>${r.records}</td>` + src.map(s => `<td>${fmt(r[s[0]], 2)}` +
+      (s[0] === "scada" ? ` [${fmt(r.scada_lo, 1)}-${fmt(r.scada_hi, 1)}]` : "") + "</td>").join("") + "</tr>").join("") + "</table>";
+})();
+</script>
+</body>
+</html>

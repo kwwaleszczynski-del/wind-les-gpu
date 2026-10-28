@@ -1,0 +1,48 @@
+{
+  "scada_records": 159289,
+  "scada_days": 1913,
+  "ambient_ti_scada": 0.1267,
+  "ti_les_hub": 0.1338,
+  "les_direction_step_deg": 5.0,
+  "les_directions": 72,
+  "wake_loss_pct": {
+    "scada": 9.24,
+    "scada_lo": 8.98,
+    "scada_hi": 9.52,
+    "les": 9.79,
+    "pywake_jensen": 11.44,
+    "pywake_gaussian": 9.69,
+    "pywake_turbopark": 12.13,
+    "les_se": 0.11
+  },
+  "sector_skill": {
+    "les": {
+      "rmse_pp": 2.24,
+      "bias_pp": 1.28,
+      "within_scada_ci": 2
+    },
+    "pywake_jensen": {
+      "rmse_pp": 3.69,
+      "bias_pp": 3.09,
+      "within_scada_ci": 0
+    },
+    "pywake_gaussian": {
+      "rmse_pp": 2.57,
+      "bias_pp": 1.36,
+      "within_scada_ci": 1
+    },
+    "pywake_turbopark": {
+      "rmse_pp": 4.37,
+      "bias_pp": 3.8,
+      "within_scada_ci": 0
+    }
+  },
+  "sampling_bias_pct": 0.0,
+  "les_cost": {
+    "cells": 2138280,
+    "median_wall_s": 80.886,
+    "median_mlups": 921.6800000000001,
+    "total_gpu_h": 1.714011666666667,
+    "gpu_mb": 1520.7
+  }
+}

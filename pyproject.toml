@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wind-les-gpu"
+version = "0.1.0"
+description = "Home-made lattice Boltzmann LES of the open Kelmarsh wind farm on a laptop GPU (NVIDIA Warp), with actuator disks, checked against SCADA and PyWake engineering wake models."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "warp-lang>=1.8",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pyarrow>=14",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+# SCADA records and PyWake models of the companion project, pinned to its published commit
+compare = ["wind-wake-shadow @ git+https://github.com/kwwaleszczynski-del/wind-wake-shadow@2bb9f114dfdc4c95b3af1bfacd5af5b957b352c2"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+wind-les = "wind_les.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
