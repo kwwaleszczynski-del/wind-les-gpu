@@ -1,0 +1,237 @@
+\begin{thebibliography}{31}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Asmuth et~al.(2020)Asmuth, Olivares-Espinosa, and
+  Ivanell]{asmuth2020actuator}
+Henrik Asmuth, Hugo Olivares-Espinosa, and Stefan Ivanell.
+\newblock Actuator line simulations of wind turbine wakes using the lattice
+  {Boltzmann} method.
+\newblock \emph{Wind Energy Science}, 5\penalty0 (2):\penalty0 623--645, 2020.
+\newblock \doi{10.5194/wes-5-623-2020}.
+
+\bibitem[Asmuth et~al.(2021)Asmuth, Jan{\ss}en, Olivares-Espinosa, and
+  Ivanell]{asmuth2021wall}
+Henrik Asmuth, Christian~F. Jan{\ss}en, Hugo Olivares-Espinosa, and Stefan
+  Ivanell.
+\newblock Wall-modeled lattice {Boltzmann} large-eddy simulation of neutral
+  atmospheric boundary layers.
+\newblock \emph{Physics of Fluids}, 33\penalty0 (10):\penalty0 105111, 2021.
+\newblock \doi{10.1063/5.0065701}.
+
+\bibitem[Barthelmie et~al.(2009)Barthelmie, Hansen, Frandsen, Rathmann,
+  Schepers, Schlez, Phillips, Rados, Zervos, Politis, and
+  Chaviaropoulos]{barthelmie2009offshore}
+R.~J. Barthelmie, K.~Hansen, S.~T. Frandsen, O.~Rathmann, J.~G. Schepers,
+  W.~Schlez, J.~Phillips, K.~Rados, A.~Zervos, E.~S. Politis, and P.~K.
+  Chaviaropoulos.
+\newblock Modelling and measuring flow and wind turbine wakes in large wind
+  farms offshore.
+\newblock \emph{Wind Energy}, 12\penalty0 (5):\penalty0 431--444, 2009.
+\newblock \doi{10.1002/we.348}.
+
+\bibitem[Bastankhah and Port{\'e}-Agel(2014)]{bastankhah2014gaussian}
+Majid Bastankhah and Fernando Port{\'e}-Agel.
+\newblock A new analytical model for wind-turbine wakes.
+\newblock \emph{Renewable Energy}, 70:\penalty0 116--123, 2014.
+\newblock \doi{10.1016/j.renene.2014.01.002}.
+
+\bibitem[Brasseur and Wei(2010)]{brasseur2010loglayer}
+James~G. Brasseur and Tie Wei.
+\newblock Designing large-eddy simulation of the turbulent boundary layer to
+  capture law-of-the-wall scaling.
+\newblock \emph{Physics of Fluids}, 22\penalty0 (2):\penalty0 021303, 2010.
+\newblock \doi{10.1063/1.3319073}.
+
+\bibitem[Calaf et~al.(2010)Calaf, Meneveau, and Meyers]{calaf2010les}
+Marc Calaf, Charles Meneveau, and Johan Meyers.
+\newblock Large eddy simulation study of fully developed wind-turbine array
+  boundary layers.
+\newblock \emph{Physics of Fluids}, 22\penalty0 (1):\penalty0 015110, 2010.
+\newblock \doi{10.1063/1.3291077}.
+
+\bibitem[Guo et~al.(2002)Guo, Zheng, and Shi]{guo2002forcing}
+Zhaoli Guo, Chuguang Zheng, and Baochang Shi.
+\newblock Discrete lattice effects on the forcing term in the lattice
+  {Boltzmann} method.
+\newblock \emph{Physical Review E}, 65\penalty0 (4):\penalty0 046308, 2002.
+\newblock \doi{10.1103/PhysRevE.65.046308}.
+
+\bibitem[Haas et~al.(2024)Haas, Krien, Schachler, et~al.]{haas2024windpowerlib}
+Sabine Haas, Uwe Krien, Birgit Schachler, et~al.
+\newblock windpowerlib, 2024.
+\newblock Zenodo,
+  \href{https://doi.org/10.5281/zenodo.824267}{doi:10.5281/zenodo.824267}.
+
+\bibitem[Hou et~al.(1994)Hou, Sterling, Chen, and Doolen]{hou1994subgrid}
+S.~Hou, J.~Sterling, S.~Chen, and G.~D. Doolen.
+\newblock A lattice {Boltzmann} subgrid model for high {Reynolds} number flows.
+\newblock arXiv:comp-gas/9401004; published in Pattern Formation and Lattice
+  Gas Automata, Fields Institute Communications 6 (1996), 1994.
+\newblock URL \url{https://arxiv.org/abs/comp-gas/9401004}.
+
+\bibitem[{International Electrotechnical Commission}(2017)]{iec61400121}
+{International Electrotechnical Commission}.
+\newblock {IEC 61400-12-1:2017. Wind energy generation systems -- Part 12-1:
+  Power performance measurements of electricity producing wind turbines}.
+\newblock IEC, Geneva, 2017.
+
+\bibitem[Jensen(1983)]{jensen1983note}
+N.~O. Jensen.
+\newblock A note on wind generator interaction.
+\newblock Technical Report Ris{\o}-M-2411, Ris{\o} National Laboratory,
+  Roskilde, 1983.
+
+\bibitem[Kati{\'c} et~al.(1986)Kati{\'c}, H{\o}jstrup, and
+  Jensen]{katic1986cluster}
+I.~Kati{\'c}, J.~H{\o}jstrup, and N.~O. Jensen.
+\newblock A simple model for cluster efficiency.
+\newblock In \emph{European Wind Energy Association Conference and Exhibition
+  (EWEC'86)}, pages 407--410, Rome, 1986.
+
+\bibitem[Kr{\"u}ger et~al.(2017)Kr{\"u}ger, Kusumaatmaja, Kuzmin, Shardt,
+  Silva, and Viggen]{kruger2017lbm}
+Timm Kr{\"u}ger, Halim Kusumaatmaja, Alexandr Kuzmin, Orest Shardt, Goncalo
+  Silva, and Erlend~Magnus Viggen.
+\newblock \emph{The Lattice {Boltzmann} Method: Principles and Practice}.
+\newblock Graduate Texts in Physics. Springer, Cham, 2017.
+\newblock \doi{10.1007/978-3-319-44649-3}.
+
+\bibitem[Latt and Chopard(2006)]{latt2006regularized}
+Jonas Latt and Bastien Chopard.
+\newblock Lattice {Boltzmann} method with regularized pre-collision
+  distribution functions.
+\newblock \emph{Mathematics and Computers in Simulation}, 72\penalty0
+  (2--6):\penalty0 165--168, 2006.
+\newblock \doi{10.1016/j.matcom.2006.05.017}.
+
+\bibitem[Lehmann et~al.(2022)Lehmann, Krause, Amati, Sega, Harting, and
+  Gekle]{lehmann2022precision}
+Moritz Lehmann, Mathias~J. Krause, Giorgio Amati, Marcello Sega, Jens Harting,
+  and Stephan Gekle.
+\newblock Accuracy and performance of the lattice {Boltzmann} method with
+  64-bit, 32-bit, and customized 16-bit number formats.
+\newblock \emph{Physical Review E}, 106\penalty0 (1):\penalty0 015308, 2022.
+\newblock \doi{10.1103/PhysRevE.106.015308}.
+
+\bibitem[Macklin(2022)]{macklin2022warp}
+Miles Macklin.
+\newblock Warp: A high-performance {Python} framework for {GPU} simulation and
+  graphics.
+\newblock NVIDIA GPU Technology Conference (GTC), 2022.
+\newblock URL \url{https://github.com/NVIDIA/warp}.
+
+\bibitem[Mason and Thomson(1992)]{mason1992backscatter}
+P.~J. Mason and D.~J. Thomson.
+\newblock Stochastic backscatter in large-eddy simulations of boundary layers.
+\newblock \emph{Journal of Fluid Mechanics}, 242:\penalty0 51--78, 1992.
+\newblock \doi{10.1017/S0022112092002271}.
+
+\bibitem[Moeng(1984)]{moeng1984les}
+Chin-Hoh Moeng.
+\newblock A large-eddy-simulation model for the study of planetary
+  boundary-layer turbulence.
+\newblock \emph{Journal of the Atmospheric Sciences}, 41\penalty0
+  (13):\penalty0 2052--2062, 1984.
+\newblock \doi{10.1175/1520-0469(1984)041<2052:ALESMF>2.0.CO;2}.
+
+\bibitem[Munters et~al.(2016)Munters, Meneveau, and Meyers]{munters2016shifted}
+Wim Munters, Charles Meneveau, and Johan Meyers.
+\newblock Shifted periodic boundary conditions for simulations of wall-bounded
+  turbulent flows.
+\newblock \emph{Physics of Fluids}, 28\penalty0 (2):\penalty0 025112, 2016.
+\newblock \doi{10.1063/1.4941912}.
+
+\bibitem[Niayifar and Port{\'e}-Agel(2016)]{niayifar2016analytical}
+Amin Niayifar and Fernando Port{\'e}-Agel.
+\newblock Analytical modeling of wind farms: A new approach for power
+  prediction.
+\newblock \emph{Energies}, 9\penalty0 (9):\penalty0 741, 2016.
+\newblock \doi{10.3390/en9090741}.
+
+\bibitem[Nygaard et~al.(2020)Nygaard, Steen, Poulsen, and
+  Pedersen]{nygaard2020cluster}
+Nicolai~Gayle Nygaard, S{\o}ren~Trads Steen, Lina Poulsen, and
+  Jesper~Gr{\o}nnegaard Pedersen.
+\newblock Modelling cluster wakes and wind farm blockage.
+\newblock \emph{Journal of Physics: Conference Series}, 1618\penalty0
+  (6):\penalty0 062072, 2020.
+\newblock \doi{10.1088/1742-6596/1618/6/062072}.
+
+\bibitem[Pedersen et~al.(2022)Pedersen, Svensson, Poulsen, and
+  Nygaard]{pedersen2022turbopark}
+J.~G. Pedersen, E.~Svensson, L.~Poulsen, and N.~G. Nygaard.
+\newblock Turbulence optimized park model with {Gaussian} wake profile.
+\newblock \emph{Journal of Physics: Conference Series}, 2265\penalty0
+  (2):\penalty0 022063, 2022.
+\newblock \doi{10.1088/1742-6596/2265/2/022063}.
+
+\bibitem[Pedersen et~al.(2019)Pedersen, van~der Laan, Friis-M{\o}ller, Rinker,
+  and R{\'e}thor{\'e}]{pedersen2019pywake}
+Mads~M. Pedersen, Paul van~der Laan, Mikkel Friis-M{\o}ller, Jennifer Rinker,
+  and Pierre-Elouan R{\'e}thor{\'e}.
+\newblock {DTUWindEnergy/PyWake}: {PyWake}, 2019.
+\newblock Zenodo,
+  \href{https://doi.org/10.5281/zenodo.2562662}{doi:10.5281/zenodo.2562662}.
+
+\bibitem[Plumley and Takeuchi(2025)]{plumley2025kelmarsh}
+Charlie Plumley and Roberta Takeuchi.
+\newblock Kelmarsh wind farm data, 2025.
+\newblock Zenodo,
+  \href{https://doi.org/10.5281/zenodo.16807551}{doi:10.5281/zenodo.16807551},
+  licence CC-BY-4.0.
+
+\bibitem[Port{\'e}-Agel et~al.(2020)Port{\'e}-Agel, Bastankhah, and
+  Shamsoddin]{porteagel2020review}
+Fernando Port{\'e}-Agel, Majid Bastankhah, and Sina Shamsoddin.
+\newblock Wind-turbine and wind-farm flows: A review.
+\newblock \emph{Boundary-Layer Meteorology}, 174\penalty0 (1):\penalty0 1--59,
+  2020.
+\newblock \doi{10.1007/s10546-019-00473-0}.
+
+\bibitem[Shapiro et~al.(2019)Shapiro, Gayme, and Meneveau]{shapiro2019filtered}
+Carl~R. Shapiro, Dennice~F. Gayme, and Charles Meneveau.
+\newblock Filtered actuator disks: Theory and application to wind turbine
+  models in large eddy simulation.
+\newblock \emph{Wind Energy}, 22\penalty0 (10):\penalty0 1414--1420, 2019.
+\newblock \doi{10.1002/we.2376}.
+
+\bibitem[Smagorinsky(1963)]{smagorinsky1963}
+J.~Smagorinsky.
+\newblock General circulation experiments with the primitive equations: {I}.
+  {The} basic experiment.
+\newblock \emph{Monthly Weather Review}, 91\penalty0 (3):\penalty0 99--164,
+  1963.
+\newblock \doi{10.1175/1520-0493(1963)091<0099:GCEWTP>2.3.CO;2}.
+
+\bibitem[Stevens and Meneveau(2017)]{stevens2017review}
+Richard J. A.~M. Stevens and Charles Meneveau.
+\newblock Flow structure and turbulence in wind farms.
+\newblock \emph{Annual Review of Fluid Mechanics}, 49:\penalty0 311--339, 2017.
+\newblock \doi{10.1146/annurev-fluid-010816-060206}.
+
+\bibitem[Stevens et~al.(2014)Stevens, Graham, and
+  Meneveau]{stevens2014concurrent}
+Richard J. A.~M. Stevens, Jason Graham, and Charles Meneveau.
+\newblock A concurrent precursor inflow method for large eddy simulations and
+  applications to finite length wind farms.
+\newblock \emph{Renewable Energy}, 68:\penalty0 46--50, 2014.
+\newblock \doi{10.1016/j.renene.2014.01.024}.
+
+\bibitem[Waleszczy{\'n}ski(2026{\natexlab{a}})]{waleszczynski2026wakeshadow}
+Konrad Waleszczy{\'n}ski.
+\newblock wind-wake-shadow: engineering wake models against {Kelmarsh} {SCADA}.
+\newblock Software, commit 2bb9f11, 2026{\natexlab{a}}.
+\newblock URL \url{https://github.com/kwwaleszczynski-del/wind-wake-shadow}.
+
+\bibitem[Waleszczy{\'n}ski(2026{\natexlab{b}})]{waleszczynski2026windles}
+Konrad Waleszczy{\'n}ski.
+\newblock wind-les-gpu: lattice {Boltzmann} {LES} of the {Kelmarsh} wind farm
+  on a laptop {GPU}.
+\newblock Software, MIT licence, 2026{\natexlab{b}}.
+\newblock URL \url{https://github.com/kwwaleszczynski-del/wind-les-gpu}.
+
+\end{thebibliography}
