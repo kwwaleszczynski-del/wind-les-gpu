@@ -118,7 +118,8 @@ def hub_plane(results: Path, out: Path, n: int = 8, directions=(240.0, 300.0)) -
             if study.run_path(results, n, wd).exists()}
     if not runs:
         return
-    fig, ax = plt.subplots(len(runs), 2, figsize=(11, 4.3 * len(runs)), squeeze=False)
+    fig, ax = plt.subplots(len(runs), 2, figsize=(11, 4.3 * len(runs)), squeeze=False,
+                           gridspec_kw={"wspace": 0.3})  # room between the panels for the y-axis label
     for row, (wd, r) in enumerate(runs.items()):
         uref = r["inflow_hub_lb"]
         ext = [-geo.x0 * setup.dx / 1000, (geo.nx - geo.x0) * setup.dx / 1000,
@@ -216,7 +217,7 @@ def efficiency_direction(results: Path, out: Path) -> None:
     ax.set(xlabel="wind direction [deg]", ylabel="farm efficiency", xlim=(0, 360),
            title="Farm efficiency by direction (5-degree bins, bins with >= 100 records)")
     ax.set_xticks(np.arange(0, 361, 30))
-    ax.legend(ncol=5, loc="lower left")
+    ax.legend(ncol=5, loc="upper center", bbox_to_anchor=(0.5, -0.16))  # below the axes: it covered the minima
     _save(fig, out / "efficiency_direction.png")
 
 
@@ -242,10 +243,12 @@ def turbine_efficiency(results: Path, out: Path) -> None:
         ax.set_xlabel("wind direction [deg]")
     for ax in axes[:, 0]:
         ax.set_ylabel("power / free-stream reference")
-    axes[0, 0].legend(loc="lower left", fontsize=8)
+    # one legend for the figure, below the panels: inside T1 it covered the dip at 10-30 deg
+    handles, names = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, names, loc="lower center", ncol=3, fontsize=9)
     fig.suptitle("Each turbine against the free-stream reference (5-degree bins; shaded: sectors 60-150 deg)",
                  fontweight="bold", fontsize=10.5)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
     _save(fig, out / "turbine_efficiency.png")
 
 
