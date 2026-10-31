@@ -40,10 +40,13 @@ speed 5-10 m/s). Every source is evaluated on the same records and normalised th
 | RMSE over sectors vs SCADA | | | **2.2 pp** | 2.2 / 2.2 pp | 2.6 pp | 3.7 pp | 4.4 pp |
 | mean bias vs SCADA | | | **+1.3 pp** | +1.3 / +1.3 pp | +1.4 pp | +3.1 pp | +3.8 pp |
 
-- **The LES lands where the best engineering model lands, without a tunable wake parameter.** Farm loss 9.8 %
-  against 9.2 % measured (Gaussian 9.7 %). Per sector it has the lowest error of the four (RMSE 2.2 percentage
-  points against 2.6 for the Gaussian model); Jensen and TurbOPark overpredict almost everywhere. The LES only has
-  physical inputs: a roughness length, a thrust coefficient and the turbine positions.
+- **The LES lands where the best engineering model lands, without a wake parameter fitted to the losses.** Farm
+  loss 9.8 % against 9.2 % measured (Gaussian 9.7 %). Per sector it has the lowest error of the four (RMSE 2.2
+  percentage points against 2.6 for the Gaussian model); Jensen and TurbOPark overpredict almost everywhere. The
+  LES inputs are a roughness length, a thrust coefficient and the turbine positions, and the first two are chosen,
+  not measured: $`z_0`$ = 0.2 m was picked so that the hub-height turbulence intensity is close to the SCADA
+  ambient 12.7 % (which sets the wake recovery), and $`C_T'`$ is calibrated per grid resolution so that an
+  isolated disk gives $`C_T`$ = 0.8 from a generic thrust curve. Neither is fitted to the measured wake losses.
 - **A second, independent inflow realisation gives the same answer.** Farm loss 9.79 and 9.83 %, every sector
   within 0.5 points (root mean square 0.24), the same RMSE and bias against the SCADA. The scatter of the
   10-minute blocks within one realisation predicts a larger difference (0.44 points), so the whiskers, ± 2

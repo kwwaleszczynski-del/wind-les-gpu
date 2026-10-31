@@ -490,8 +490,11 @@ time of one wind direction (10-minute spin-up and 30-minute average) at three re
 A lattice Boltzmann LES written from published methods runs a complete 72-direction sweep of a six-turbine onshore
 farm in 1.7 hours on a 6\,GiB laptop GPU. Evaluated on exactly the same SCADA records and with the same
 normalisation as three engineering wake models, it gives a farm wake loss of 9.81\,\% against 9.24\,\% measured and
-the lowest sector-wise error of the four, without a tunable wake parameter: its inputs are a roughness length
-chosen for the inflow turbulence, a thrust coefficient and the turbine positions. Two ingredients made the
+the lowest sector-wise error of the four, without a wake parameter fitted to the losses. Its inputs are a
+roughness length, a thrust coefficient and the turbine positions, and the first two are chosen rather than
+measured: the roughness length so that the hub-height turbulence intensity is close to the SCADA ambient value,
+and the disk coefficient $C_T'$, calibrated per resolution, so that an isolated disk reproduces the thrust
+coefficient of a generic thrust curve. Neither is fitted to the measured wake losses. Two ingredients made the
 comparison meaningful at this cost: referring every turbine to its own undisturbed inflow from a run without
 turbines, which removes the bias of long-lived streaks, and a second inflow realisation, which showed that the
 block-based uncertainty is not optimistic. The largest common error of all models, in the easterly sectors, is not
